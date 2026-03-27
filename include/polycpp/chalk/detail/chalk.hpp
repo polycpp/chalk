@@ -4,6 +4,8 @@
 #include <polycpp/chalk/chalk.hpp>
 #include <polycpp/chalk/detail/ansi_styles.hpp>
 
+#include <polycpp/core/error.hpp>
+
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -68,7 +70,14 @@ inline void encaseCRLF(std::string& str, const std::string& closeAll, const std:
 
 inline Chalk::Chalk() : level_(0) {}
 
-inline Chalk::Chalk(const Options& options) : level_(options.level.value_or(0)) {}
+inline Chalk::Chalk(const Options& options) : level_(options.level.value_or(0)) {
+    if (options.level.has_value()) {
+        int lvl = options.level.value();
+        if (lvl < 0 || lvl > 3) {
+            throw polycpp::Error("The `level` option should be an integer from 0 to 3");
+        }
+    }
+}
 
 inline Chalk::Chalk(std::shared_ptr<const Styler> styler, int level, bool isEmpty)
     : styler_(std::move(styler)), level_(level), isEmpty_(isEmpty) {}

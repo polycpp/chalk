@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <polycpp/chalk/detail/aggregator.hpp>
+#include <polycpp/core/error.hpp>
 
 using namespace polycpp::chalk;
 
@@ -161,6 +162,14 @@ TEST(ChalkTest, SetLevel) {
     Chalk c;
     c.setLevel(3);
     EXPECT_EQ(c.level(), 3);
+}
+
+TEST(ChalkTest, InvalidLevelThrows) {
+    // JS chalk: "The `level` option should be an integer from 0 to 3"
+    EXPECT_THROW(Chalk(Options{.level = 5}), polycpp::Error);
+    EXPECT_THROW(Chalk(Options{.level = -1}), polycpp::Error);
+    EXPECT_NO_THROW(Chalk(Options{.level = 0}));
+    EXPECT_NO_THROW(Chalk(Options{.level = 3}));
 }
 
 TEST(ChalkTest, Level0ReturnsPlainText) {

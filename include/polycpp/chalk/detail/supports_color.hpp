@@ -48,6 +48,24 @@ inline bool startsWithCI(const std::string& str, const std::string& prefix) {
     return true;
 }
 
+/// @brief Case-insensitive substring search.
+inline bool containsCI(const std::string& str, const std::string& needle) {
+    if (needle.empty()) return true;
+    if (needle.size() > str.size()) return false;
+    for (std::size_t i = 0; i <= str.size() - needle.size(); ++i) {
+        bool match = true;
+        for (std::size_t j = 0; j < needle.size(); ++j) {
+            if (std::tolower(static_cast<unsigned char>(str[i + j])) !=
+                std::tolower(static_cast<unsigned char>(needle[j]))) {
+                match = false;
+                break;
+            }
+        }
+        if (match) return true;
+    }
+    return false;
+}
+
 /// @brief Check if environment variable is set (exists).
 inline bool hasEnv(const char* name) {
     return std::getenv(name) != nullptr;
@@ -202,15 +220,17 @@ inline ColorSupport detectColorSupport(int fd) {
     }
 
     // 10. Check TERM for basic color support
+    // JS regex: /^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i
+    // The /i flag makes ALL parts case-insensitive, including substring matches.
     if (detail::startsWithCI(term, "screen") ||
         detail::startsWithCI(term, "xterm") ||
         detail::startsWithCI(term, "vt100") ||
         detail::startsWithCI(term, "vt220") ||
         detail::startsWithCI(term, "rxvt") ||
-        term.find("color") != std::string::npos ||
-        term.find("ansi") != std::string::npos ||
-        term.find("cygwin") != std::string::npos ||
-        term.find("linux") != std::string::npos) {
+        detail::containsCI(term, "color") ||
+        detail::containsCI(term, "ansi") ||
+        detail::containsCI(term, "cygwin") ||
+        detail::containsCI(term, "linux")) {
         return makeResult(1);
     }
 
