@@ -2,9 +2,9 @@
 
 #include <polycpp/chalk/ansi_styles.hpp>
 
-#include <algorithm>
+#include <polycpp/core/math.hpp>
+
 #include <cctype>
-#include <cmath>
 #include <string>
 
 namespace polycpp {
@@ -36,13 +36,13 @@ inline int rgbToAnsi256(int r, int g, int b) {
             return 231;
         }
 
-        return static_cast<int>(std::round(((r - 8) / 247.0) * 24)) + 232;
+        return static_cast<int>(polycpp::Math::round(((r - 8) / 247.0) * 24)) + 232;
     }
 
     return 16
-        + (36 * static_cast<int>(std::round(r / 255.0 * 5)))
-        + (6 * static_cast<int>(std::round(g / 255.0 * 5)))
-        + static_cast<int>(std::round(b / 255.0 * 5));
+        + (36 * static_cast<int>(polycpp::Math::round(r / 255.0 * 5)))
+        + (6 * static_cast<int>(polycpp::Math::round(g / 255.0 * 5)))
+        + static_cast<int>(polycpp::Math::round(b / 255.0 * 5));
 }
 
 inline std::array<int, 3> hexToRgb(const std::string& hex) {
@@ -110,20 +110,20 @@ inline int ansi256ToAnsi(int code) {
     } else {
         int c = code - 16;
         int remainder = c % 36;
-        red = std::floor(c / 36.0) / 5.0;
-        green = std::floor(remainder / 6.0) / 5.0;
+        red = polycpp::Math::floor(c / 36.0) / 5.0;
+        green = polycpp::Math::floor(remainder / 6.0) / 5.0;
         blue = (remainder % 6) / 5.0;
     }
 
-    double value = std::max({red, green, blue}) * 2;
+    double value = polycpp::Math::max(red, green, blue) * 2;
 
     if (value == 0) {
         return 30;
     }
 
-    int result = 30 + ((static_cast<int>(std::round(blue)) << 2) |
-                        (static_cast<int>(std::round(green)) << 1) |
-                        static_cast<int>(std::round(red)));
+    int result = 30 + ((static_cast<int>(polycpp::Math::round(blue)) << 2) |
+                        (static_cast<int>(polycpp::Math::round(green)) << 1) |
+                        static_cast<int>(polycpp::Math::round(red)));
 
     if (value == 2) {
         result += 60;

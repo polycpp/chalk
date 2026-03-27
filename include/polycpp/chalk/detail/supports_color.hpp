@@ -2,6 +2,9 @@
 
 #include <polycpp/chalk/supports_color.hpp>
 
+#include <polycpp/core/number.hpp>
+#include <polycpp/process.hpp>
+
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -45,12 +48,6 @@ inline bool startsWithCI(const std::string& str, const std::string& prefix) {
     return true;
 }
 
-/// @brief Safely get environment variable, returns empty string if not set.
-inline std::string getEnv(const char* name) {
-    const char* val = std::getenv(name);
-    return val ? std::string(val) : std::string();
-}
-
 /// @brief Check if environment variable is set (exists).
 inline bool hasEnv(const char* name) {
     return std::getenv(name) != nullptr;
@@ -71,7 +68,7 @@ inline ColorSupport detectColorSupport(int fd) {
     // 1. Check FORCE_COLOR env var
     int forceColorLevel = -1;  // -1 means not set
     if (detail::hasEnv("FORCE_COLOR")) {
-        std::string forceColor = detail::getEnv("FORCE_COLOR");
+        std::string forceColor = polycpp::process::getenv("FORCE_COLOR");
         if (forceColor == "true") {
             forceColorLevel = 1;
         } else if (forceColor == "false") {
@@ -79,13 +76,13 @@ inline ColorSupport detectColorSupport(int fd) {
         } else if (forceColor.empty()) {
             forceColorLevel = 1;
         } else {
-            // Parse as integer
-            try {
-                int val = std::stoi(forceColor);
-                forceColorLevel = std::min(val, 3);
-                if (forceColorLevel < 0) forceColorLevel = 0;
-            } catch (...) {
+            // Parse as integer using Number::parseInt (returns NaN on failure)
+            double val = polycpp::Number::parseInt(forceColor, 10);
+            if (polycpp::Number::isNaN(val)) {
                 forceColorLevel = 0;
+            } else {
+                forceColorLevel = static_cast<int>(std::min(val, 3.0));
+                if (forceColorLevel < 0) forceColorLevel = 0;
             }
         }
     }
@@ -113,7 +110,7 @@ inline ColorSupport detectColorSupport(int fd) {
     int min = forceColorLevel > 0 ? forceColorLevel : 0;
 
     // Check for dumb terminal
-    std::string term = detail::getEnv("TERM");
+    std::string term = polycpp::process::getenv("TERM");
     if (term == "dumb") {
         return makeResult(min);
     }
@@ -130,7 +127,7 @@ inline ColorSupport detectColorSupport(int fd) {
             return makeResult(1);
         }
 
-        if (detail::getEnv("CI_NAME") == "codeship") {
+        if (polycpp::process::getenv("CI_NAME") == "codeship") {
             return makeResult(1);
         }
 
@@ -139,7 +136,7 @@ inline ColorSupport detectColorSupport(int fd) {
 
     // 5. Check TEAMCITY_VERSION
     if (detail::hasEnv("TEAMCITY_VERSION")) {
-        std::string ver = detail::getEnv("TEAMCITY_VERSION");
+        std::string ver = polycpp::process::getenv("TEAMCITY_VERSION");
         // Match: ^(9\.(0*[1-9]\d*)\.|\d{2,}\.)
         // i.e., version >= 9.1 supports basic colors
         if (ver.size() >= 3) {
@@ -166,7 +163,7 @@ inline ColorSupport detectColorSupport(int fd) {
     }
 
     // 6. Check COLORTERM
-    if (detail::getEnv("COLORTERM") == "truecolor") {
+    if (polycpp::process::getenv("COLORTERM") == "truecolor") {
         return makeResult(3);
     }
 
@@ -177,9 +174,9 @@ inline ColorSupport detectColorSupport(int fd) {
 
     // 8. Check TERM_PROGRAM
     if (detail::hasEnv("TERM_PROGRAM")) {
-        std::string termProgram = detail::getEnv("TERM_PROGRAM");
+        std::string termProgram = polycpp::process::getenv("TERM_PROGRAM");
         if (termProgram == "iTerm.app") {
-            std::string verStr = detail::getEnv("TERM_PROGRAM_VERSION");
+            std::string verStr = polycpp::process::getenv("TERM_PROGRAM_VERSION");
             int version = 0;
             if (!verStr.empty()) {
                 // Parse first component before '.'
@@ -188,7 +185,8 @@ inline ColorSupport detectColorSupport(int fd) {
                     if (ch == '.') break;
                     firstPart += ch;
                 }
-                try { version = std::stoi(firstPart); } catch (...) {}
+                double v = polycpp::Number::parseInt(firstPart, 10);
+                if (!polycpp::Number::isNaN(v)) version = static_cast<int>(v);
             }
             return makeResult(version >= 3 ? 3 : 2);
         }

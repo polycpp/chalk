@@ -20,11 +20,22 @@ namespace detail {
 /// correct ANSI nesting behavior.
 inline void replaceCloseWithReopen(std::string& str, const std::string& search, const std::string& append) {
     if (search.empty()) return;
-    std::string::size_type pos = 0;
-    while ((pos = str.find(search, pos)) != std::string::npos) {
-        str.insert(pos + search.length(), append);
-        pos += search.length() + append.length();
-    }
+    auto index = str.find(search);
+    if (index == std::string::npos) return;
+
+    std::string result;
+    result.reserve(str.size() + append.size() * 2);  // estimate
+    std::string::size_type endIndex = 0;
+    do {
+        result.append(str, endIndex, index - endIndex);
+        result.append(search);
+        result.append(append);
+        endIndex = index + search.length();
+        index = str.find(search, endIndex);
+    } while (index != std::string::npos);
+
+    result.append(str, endIndex, std::string::npos);
+    str = std::move(result);
 }
 
 /// @brief Encase line breaks with close/open codes.
