@@ -138,14 +138,11 @@ TEST(AnsiStylesTest, MakeColorCode256Index) {
     EXPECT_EQ(ansi::makeColorCode256(3, 196), "\x1B[38;5;196m");
 }
 
-TEST(AnsiStylesTest, MakeColorCode256IndexDownsample) {
-    // Level 1: ansi256ToAnsi(196) should give us a basic code
-    // 196 = 16 + 180 => code-16=180, remainder=180%36=0, red=5/5=1.0, green=0, blue=0
-    // value = max(1,0,0)*2 = 2
-    // result = 30 + (round(0)<<2 | round(0)<<1 | round(1)) = 30+1 = 31
-    // value==2 => result += 60 => 91
-    EXPECT_EQ(ansi::makeColorCode256(1, 196), "\x1B[91m");
-    EXPECT_EQ(ansi::makeColorCode256(1, 196, true), "\x1B[101m");
+TEST(AnsiStylesTest, MakeColorCode256AlwaysOutputs256) {
+    // JS chalk's ansi256() always outputs 256-color format, never downsamples.
+    // getModelAnsi falls through to ansiStyles[type][model]() regardless of level.
+    EXPECT_EQ(ansi::makeColorCode256(1, 196), "\x1B[38;5;196m");
+    EXPECT_EQ(ansi::makeColorCode256(1, 196, true), "\x1B[48;5;196m");
 }
 
 // ═══ Chalk Core Tests ═══════════════════════════════
@@ -438,6 +435,87 @@ TEST(ChalkTest, NestingWithBackgroundColors) {
     // Inner: \x1B[42mg\x1B[49m
     // Outer bgRed replaces \x1B[49m with \x1B[49m\x1B[41m
     EXPECT_EQ(result, "\x1B[41mr\x1B[42mg\x1B[49m\x1B[41mr\x1B[49m");
+}
+
+// ═══ Tests Ported from JS chalk test/chalk.js ═══════
+
+// JS test: "support nesting styles" (line 38-43)
+TEST(ChalkTest, JsNestingWithMixedStyles) {
+    Chalk c(Options{.level = 3});
+    std::string result = c.red()("foo" + c.underline().bgBlue()("bar") + "!");
+    EXPECT_EQ(result, "\x1B[31mfoo\x1B[4m\x1B[44mbar\x1B[49m\x1B[24m!\x1B[39m");
+}
+
+// JS test: "support nesting styles of the same type" (line 45-50)
+TEST(ChalkTest, JsNestingSameType) {
+    Chalk c(Options{.level = 3});
+    auto inner = c.green()("c");
+    auto middle = c.yellow()("b" + inner + "b");
+    auto result = c.red()("a" + middle + "c");
+    EXPECT_EQ(result,
+        "\x1B[31ma\x1B[33mb\x1B[32mc\x1B[39m\x1B[31m\x1B[33mb\x1B[39m\x1B[31mc\x1B[39m");
+}
+
+// JS test: "support applying multiple styles at once" (line 33-36)
+TEST(ChalkTest, JsMultipleStyles) {
+    Chalk c(Options{.level = 3});
+    EXPECT_EQ(c.red().bgGreen().underline()("foo"),
+        "\x1B[31m\x1B[42m\x1B[4mfoo\x1B[24m\x1B[49m\x1B[39m");
+    EXPECT_EQ(c.underline().red().bgGreen()("foo"),
+        "\x1B[4m\x1B[31m\x1B[42mfoo\x1B[49m\x1B[39m\x1B[24m");
+}
+
+// JS test: "properly convert RGB to 16 colors on basic color terminals" (line 97-100)
+TEST(ChalkTest, JsRgbTo16) {
+    Chalk c(Options{.level = 1});
+    EXPECT_EQ(c.hex("#FF0000")("hello"), "\x1B[91mhello\x1B[39m");
+    EXPECT_EQ(c.bgHex("#FF0000")("hello"), "\x1B[101mhello\x1B[49m");
+}
+
+// JS test: "properly convert RGB to 256 colors" (line 102-106)
+TEST(ChalkTest, JsRgbTo256And16m) {
+    EXPECT_EQ(Chalk(Options{.level = 2}).hex("#FF0000")("hello"),
+        "\x1B[38;5;196mhello\x1B[39m");
+    EXPECT_EQ(Chalk(Options{.level = 2}).bgHex("#FF0000")("hello"),
+        "\x1B[48;5;196mhello\x1B[49m");
+    EXPECT_EQ(Chalk(Options{.level = 3}).bgHex("#FF0000")("hello"),
+        "\x1B[48;2;255;0;0mhello\x1B[49m");
+}
+
+// JS test: "don't emit RGB codes if level is 0" (line 108-111)
+TEST(ChalkTest, JsNoCodesAtLevel0) {
+    EXPECT_EQ(Chalk(Options{.level = 0}).hex("#FF0000")("hello"), "hello");
+    EXPECT_EQ(Chalk(Options{.level = 0}).bgHex("#FF0000")("hello"), "hello");
+}
+
+// JS test: "don't output escape codes if the input is empty" (line 78-81)
+TEST(ChalkTest, JsEmptyInput) {
+    Chalk c(Options{.level = 3});
+    EXPECT_EQ(c.red()(""), "");
+    EXPECT_EQ(c.red().blue().black()(""), "");
+}
+
+// JS test: "support falsy values" (line 74-76)
+TEST(ChalkTest, JsFalsyValues) {
+    Chalk c(Options{.level = 3});
+    EXPECT_EQ(c.red()(0), "\x1B[31m0\x1B[39m");
+}
+
+// JS test: "reset all styles with .reset()" (line 52-54)
+TEST(ChalkTest, JsResetWrapping) {
+    Chalk c(Options{.level = 3});
+    std::string styled = c.red().bgGreen().underline()("foo");
+    std::string result = c.reset()(styled + "foo");
+    EXPECT_EQ(result,
+        "\x1B[0m\x1B[31m\x1B[42m\x1B[4mfoo\x1B[24m\x1B[49m\x1B[39mfoo\x1B[0m");
+}
+
+// Bug fix test: ansi256 should NOT downsample at level 1
+// JS chalk always outputs 256-color format for ansi256() regardless of level
+TEST(ChalkTest, Ansi256NoDownsampleAtLevel1) {
+    Chalk c(Options{.level = 1});
+    EXPECT_EQ(c.ansi256(196)("hello"), "\x1B[38;5;196mhello\x1B[39m");
+    EXPECT_EQ(c.bgAnsi256(196)("hello"), "\x1B[48;5;196mhello\x1B[49m");
 }
 
 // ═══ Color Support Detection Tests ══════════════════

@@ -162,12 +162,11 @@ inline std::string makeColorCode(int level, const std::string& hex, bool backgro
 }
 
 inline std::string makeColorCode256(int level, int index, bool background) {
-    if (level == 3 || level == 2) {
-        return wrapAnsi256(index, background);
-    }
-
-    // Level 1: downsample to 16 colors
-    return wrapAnsi16(ansi256ToAnsi(index) + (background ? 10 : 0));
+    // JS chalk always outputs 256-color format for ansi256(), regardless of
+    // terminal level. The getModelAnsi function (index.js:91) falls through to
+    // ansiStyles[type][model]() which always uses wrapAnsi256. No downsampling.
+    (void)level;
+    return wrapAnsi256(index, background);
 }
 
 } // namespace ansi
