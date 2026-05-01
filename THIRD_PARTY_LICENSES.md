@@ -1,14 +1,12 @@
-# Third-Party Notices
+# Third-Party Licenses
 
-This project is a C++ port inspired by the following open-source project(s).
+## Upstream package: chalk
 
----
-
-## chalk
-
-- **URL:** https://github.com/chalk/chalk
-- **License:** MIT
-- **Usage:** API design, algorithm reference, and test case inspiration for this C++ port.
+- Source: https://github.com/chalk/chalk
+- Version basis: 5.6.2
+- License: MIT
+- License evidence: upstream `package.json` and `license` file
+- Use in this repo: clean-room C++ port based on public behavior, public TypeScript declarations, and ported tests; no upstream source files are vendored
 
 ```
 MIT License
@@ -21,3 +19,13 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
+
+## Vendored runtime dependencies (inside upstream chalk 5 tarball)
+
+These two packages are vendored inside the chalk 5 npm tarball under
+`source/vendor/`. The C++ port re-implements their behavior from scratch
+rather than vendoring upstream source, so their MIT notices travel inside
+the chalk MIT notice above. They are listed here for traceability.
+
+- ansi-styles: https://github.com/chalk/ansi-styles, MIT
+- supports-color: https://github.com/chalk/supports-color, MIT

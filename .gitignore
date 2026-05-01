@@ -40,3 +40,6 @@ _deps/
 CLAUDE.md
 AGENTS.md
 .claude/
+
+# libgen upstream intake clones, npm package extracts, analyzer JSON
+.tmp/

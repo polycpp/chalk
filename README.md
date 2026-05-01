@@ -4,6 +4,25 @@ C++ port of [chalk](https://www.npmjs.com/package/chalk) — terminal string sty
 
 Part of the [polycpp](https://github.com/enricohuang/polycpp) companion library ecosystem.
 
+Port version: `0.1.0`
+Initial port based on upstream version: `5.6.2`
+
+## Status
+
+Behavior parity with upstream chalk 5.6.2 is the design target. Implemented surfaces:
+
+- chainable styles (modifiers, foreground, background, bright variants, gray/grey aliases)
+- truecolor / 256 / 16-color downsampling driven by detected level
+- `rgb`, `hex`, `ansi256`, `bgRgb`, `bgHex`, `bgAnsi256`
+- nested-style close-reopen and CRLF encasing
+- multi-argument call operator with auto-stringification
+- terminal capability detection (`supportsColor`, `supportsColorStderr`, `detectColorSupport`)
+- global `chalk()` and `chalkStderr()` instances
+- modifier/foreground/background/color name arrays
+
+Documented divergences and deferred items live in
+[`docs/divergences.md`](docs/divergences.md).
+
 ## Features
 
 - Chainable style API: `chalk.red().bold()("Error!")`
