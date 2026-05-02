@@ -2,7 +2,7 @@
 
 ## Deferred Features
 
-- A `createSupportsColor`/`detectColorSupport` overload that takes an explicit `sniffFlags`-style argument. The current C++ implementation reads `--color`/`--no-color` solely through the env-variable ladder; explicit CLI override is deferred until a real consumer needs it.
+- None identified yet for the planned `v0` scope.
 
 ## Deliberate Behavior Changes
 
@@ -45,3 +45,4 @@ boundary, or protocol surface, and the analyzer reports
 - ESM-only `imports` map (`#ansi-styles`, `#supports-color`): C++ resolves these vendored modules at compile time through `include/polycpp/chalk/ansi_styles.hpp` and `include/polycpp/chalk/supports_color.hpp`. The package-imports indirection is a JavaScript packaging detail.
 - Browser `supports-color` stub (`source/vendor/supports-color/browser.js`): C++ has no browser target.
 - The single analyzer-flagged Node parity signal (`callback-argument`) is not surfaced as a public callback API; the matched calls are JS-internal `Object.entries(...).forEach(...)`-style iteration, not part of chalk's contract.
+- Upstream `supports-color` parses `process.argv` for `--color`, `--no-color`, `--color=256`, `--color=truecolor`, etc., and exposes the behavior through the `sniffFlags` option on `createSupportsColor`. The C++ port intentionally does not read the host process's command-line arguments. Reading `argv` from a library is a Node convention that makes sense for a script-oriented runtime but is a layering violation in a C++ library: command-line parsing belongs to the host application, which should pass the resulting decision to chalk via `Options{.level = ...}` or `Chalk::setLevel`. `FORCE_COLOR` and `NO_COLOR` env vars remain the supported override mechanism because they are process-wide environment, not host argv. Applications that want CLI flag parity should parse `--color` / `--no-color` themselves and translate the result into `Options{.level = N}`.
