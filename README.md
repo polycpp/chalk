@@ -4,7 +4,7 @@ C++ port of [chalk](https://www.npmjs.com/package/chalk) — terminal string sty
 
 Part of the [polycpp](https://github.com/enricohuang/polycpp) companion library ecosystem.
 
-Port version: `0.1.0`
+Port version: `1.0.0`
 Initial port based on upstream version: `5.6.2`
 
 ## Status
