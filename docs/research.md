@@ -151,7 +151,7 @@ Tests, fixtures, examples, and docs directories:
 - companion libs selected for reuse: none. There is no existing polycpp companion that owns ANSI escape code rendering or terminal capability detection.
 - companion libs rejected or deferred: none
 - new local abstractions introduced: `polycpp::chalk::Chalk` (chainable styler), `polycpp::chalk::Options`, `polycpp::chalk::Styler` (linked-list chain node), `polycpp::chalk::ansi::AnsiCode`, `polycpp::chalk::ansi::wrapAnsi16/256/16m`, `polycpp::chalk::ansi::rgbToAnsi256/hexToRgb/ansi256ToAnsi/hexToAnsi256/rgbToAnsi/makeColorCode/makeColorCode256`, `polycpp::chalk::ColorSupport`, `polycpp::chalk::detectColorSupport`, `polycpp::chalk::supportsColor`, `polycpp::chalk::supportsColorStderr`, `polycpp::chalk::chalk()`, `polycpp::chalk::chalkStderr()`, modifier/foreground/background/color name arrays. These are package-specific behavior that no other polycpp module owns.
-- reuse risks or integration gaps: `isatty(fd)` on the raw integer FD is the only POSIX-specific call. polycpp has no public terminal-capability primitive yet, so this companion owns the implementation. If a future polycpp `tty` module appears, this port should switch to it; tracked as a follow-up rather than a blocker.
+- reuse risks or integration gaps: none material. The companion uses `polycpp::platform::isTerminal(fd)` for cross-platform `isatty` and owns the env-variable ladder for color-level detection because `polycpp::platform::supportsColor(fd)` only returns a boolean.
 
 ## Node parity surface audit
 
@@ -228,4 +228,4 @@ Tests, fixtures, examples, and docs directories:
 - unsupported APIs: JavaScript-specific Symbol-based chain extension, `Object.defineProperty` proxy memoization, browser entry for supports-color, old Windows 10 release detection
 - dependency plan: no new companion libraries are required; the port depends only on base `polycpp` (`process`, `core/error`, `core/math`, `core/number`)
 - polycpp modules to use: `polycpp::process`, `polycpp::Math`, `polycpp::Number`, `polycpp::Error`
-- missing polycpp primitives: a public terminal/`tty` module that exposes `isatty(fd)` would let this companion drop the conditional `<unistd.h>`/`<io.h>` include; tracked as a non-blocking follow-up
+- missing polycpp primitives: none. `polycpp::platform::isTerminal(fd)` covers the cross-platform `isatty` need.
