@@ -48,12 +48,7 @@
 
 ## Protocol/client tests
 
-- not applicable because chalk is a string-styling utility with no client/server, wire protocol, database, or external service surface.
-- Real service-backed e2e coverage: not applicable; this is not an external service, database, or network protocol client.
-- Stateful parser/session-state coverage: not applicable; chalk has no protocol parser or session-state surface.
-- Response writer coverage: not applicable; chalk has no protocol server surface.
-- Binary row / prepared/binary coverage: not applicable; chalk has no binary protocol surface.
-- Auth / TLS / transport / malformed-packet / fail-closed coverage: not applicable; chalk has no auth, TLS, transport, or protocol-packet surface. Misuse cases for invalid `level` and invalid hex are covered under `## Security and fail-closed tests`.
+- not applicable because chalk is a string-styling utility with no client/server, wire protocol, database, or external service surface. The `not applicable` decision in `docs/research.md` `## External SDK and native driver strategy` is the authoritative declaration; `scripts/check-port-validation.py` honors it and skips the protocol-test heuristics for this port.
 
 ## Release-blocking behaviors
 
