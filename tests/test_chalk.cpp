@@ -148,9 +148,18 @@ TEST(AnsiStylesTest, MakeColorCode256AlwaysOutputs256) {
 
 // ═══ Chalk Core Tests ═══════════════════════════════
 
-TEST(ChalkTest, DefaultConstruction) {
+TEST(ChalkTest, DefaultConstructionAutoDetectsLevel) {
+    // Match upstream applyOptions: Chalk() with no level option falls
+    // back to supportsColor().level (the auto-detected stdout level).
     Chalk c;
-    EXPECT_EQ(c.level(), 0);
+    EXPECT_EQ(c.level(), supportsColor().level);
+}
+
+TEST(ChalkTest, EmptyOptionsAutoDetectsLevel) {
+    // Match upstream applyOptions: Chalk(Options{}) with level unset
+    // falls back to supportsColor().level.
+    Chalk c{Options{}};
+    EXPECT_EQ(c.level(), supportsColor().level);
 }
 
 TEST(ChalkTest, OptionsLevel) {
@@ -159,7 +168,7 @@ TEST(ChalkTest, OptionsLevel) {
 }
 
 TEST(ChalkTest, SetLevel) {
-    Chalk c;
+    Chalk c(Options{.level = 0});
     c.setLevel(3);
     EXPECT_EQ(c.level(), 3);
 }
@@ -170,6 +179,76 @@ TEST(ChalkTest, InvalidLevelThrows) {
     EXPECT_THROW(Chalk(Options{.level = -1}), polycpp::Error);
     EXPECT_NO_THROW(Chalk(Options{.level = 0}));
     EXPECT_NO_THROW(Chalk(Options{.level = 3}));
+}
+
+// ─── Lazy level propagation (AF-C) ───────────────────
+//
+// JS chalk reads `chalk.level` lazily through the prototype getter that
+// delegates to `this[GENERATOR].level`, so a chain captured before a
+// level mutation observes the mutation when it is finally called. The
+// C++ port shares the level cell across chain links via shared_ptr<int>.
+
+TEST(ChalkTest, ChildChainObservesParentLevelChangeRedThenZero) {
+    // test/level.js: const {red} = chalk; chalk.level = 0; t.is(red.level, chalk.level);
+    Chalk parent(Options{.level = 1});
+    auto red = parent.red();
+    EXPECT_EQ(red.level(), 1);
+    parent.setLevel(0);
+    EXPECT_EQ(red.level(), parent.level());
+    EXPECT_EQ(red("foo"), "foo");
+}
+
+TEST(ChalkTest, ChildChainObservesParentLevelChangeZeroThenThree) {
+    Chalk parent(Options{.level = 0});
+    auto red = parent.red();
+    EXPECT_EQ(red("foo"), "foo");
+    parent.setLevel(3);
+    // After parent flips to level 3, the previously captured chain
+    // emits ANSI again on the next call.
+    EXPECT_EQ(red("foo"), "\x1B[31mfoo\x1B[39m");
+}
+
+TEST(ChalkTest, ChildChainPropagatesThroughDeepChain) {
+    Chalk parent(Options{.level = 3});
+    auto chained = parent.red().bold().underline();
+    EXPECT_EQ(chained.level(), 3);
+    parent.setLevel(0);
+    EXPECT_EQ(chained.level(), 0);
+    EXPECT_EQ(chained("foo"), "foo");
+}
+
+// ─── Hex lenient-subset behavior (AF-D) ──────────────
+//
+// The C++ port intentionally accepts only well-formed hex literals plus
+// an outright-invalid fallback. It does NOT match upstream's regex that
+// finds the first 3- or 6-digit hex run anywhere in the input. These
+// tests pin the documented behavior so the divergence is intentional.
+
+TEST(AnsiStylesTest, HexToRgbFourDigitRunReturnsBlack) {
+    // Upstream regex picks the first 3 hex digits ("abc" -> 170,187,204).
+    // C++ port collects all 4 hex digits, sees length != 3 && != 6,
+    // returns (0,0,0). Documented in docs/divergences.md AF-D.
+    auto [r, g, b] = ansi::hexToRgb("abcd");
+    EXPECT_EQ(r, 0); EXPECT_EQ(g, 0); EXPECT_EQ(b, 0);
+}
+
+TEST(AnsiStylesTest, HexToRgbFiveDigitRunReturnsBlack) {
+    auto [r, g, b] = ansi::hexToRgb("abcde");
+    EXPECT_EQ(r, 0); EXPECT_EQ(g, 0); EXPECT_EQ(b, 0);
+}
+
+TEST(AnsiStylesTest, HexToRgbLeadingNonHashNonHexReturnsBlack) {
+    // Upstream regex skips ahead to find the hex run; C++ breaks on the
+    // first invalid character. Documented as AF-D.
+    auto [r, g, b] = ansi::hexToRgb(" #abc");
+    EXPECT_EQ(r, 0); EXPECT_EQ(g, 0); EXPECT_EQ(b, 0);
+}
+
+TEST(AnsiStylesTest, HexToRgbTrailingNonHexBreaksOnSeparator) {
+    // After 6 valid hex chars, a non-hex non-# character ends parsing
+    // cleanly. The 6 hex digits are accepted.
+    auto [r, g, b] = ansi::hexToRgb("abcdef!");
+    EXPECT_EQ(r, 0xAB); EXPECT_EQ(g, 0xCD); EXPECT_EQ(b, 0xEF);
 }
 
 TEST(ChalkTest, Level0ReturnsPlainText) {

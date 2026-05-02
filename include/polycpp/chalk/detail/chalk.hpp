@@ -2,10 +2,13 @@
 
 #include <polycpp/chalk/ansi_styles.hpp>
 #include <polycpp/chalk/chalk.hpp>
+#include <polycpp/chalk/supports_color.hpp>
 #include <polycpp/chalk/detail/ansi_styles.hpp>
+#include <polycpp/chalk/detail/supports_color.hpp>
 
 #include <polycpp/core/error.hpp>
 
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -68,25 +71,35 @@ inline void encaseCRLF(std::string& str, const std::string& closeAll, const std:
 
 // ─── Constructors ─────────────────────────────────
 
-inline Chalk::Chalk() : level_(0) {}
+inline Chalk::Chalk()
+    : level_ptr_(std::make_shared<int>(supportsColor().level)) {}
 
-inline Chalk::Chalk(const Options& options) : level_(options.level.value_or(0)) {
+inline Chalk::Chalk(const Options& options) {
     if (options.level.has_value()) {
         int lvl = options.level.value();
         if (lvl < 0 || lvl > 3) {
             throw polycpp::Error("The `level` option should be an integer from 0 to 3");
         }
+        level_ptr_ = std::make_shared<int>(lvl);
+    } else {
+        // Match upstream applyOptions: undefined level falls back to
+        // the auto-detected stdout color level.
+        level_ptr_ = std::make_shared<int>(supportsColor().level);
     }
 }
 
-inline Chalk::Chalk(std::shared_ptr<const Styler> styler, int level, bool isEmpty)
-    : styler_(std::move(styler)), level_(level), isEmpty_(isEmpty) {}
+inline Chalk::Chalk(std::shared_ptr<const Styler> styler,
+                    std::shared_ptr<int> level_ptr,
+                    bool isEmpty)
+    : styler_(std::move(styler)),
+      level_ptr_(std::move(level_ptr)),
+      isEmpty_(isEmpty) {}
 
 // ─── Accessors ────────────────────────────────────
 
-inline int Chalk::level() const { return level_; }
+inline int Chalk::level() const { return *level_ptr_; }
 
-inline void Chalk::setLevel(int level) { level_ = level; }
+inline void Chalk::setLevel(int level) { *level_ptr_ = level; }
 
 // ─── Core Implementation ──────────────────────────
 
@@ -102,11 +115,14 @@ inline Chalk Chalk::withStyle(const std::string& open, const std::string& close)
         s->closeAll = close;
     }
     s->parent = styler_;
-    return Chalk(std::move(s), level_, isEmpty_);
+    // Share level_ptr_ so that a later setLevel on the parent propagates
+    // to chains already built from it (matches upstream JS prototype
+    // getter that reads chalk.level lazily).
+    return Chalk(std::move(s), level_ptr_, isEmpty_);
 }
 
 inline std::string Chalk::applyStyle(const std::string& text) const {
-    if (level_ <= 0 || text.empty()) {
+    if (*level_ptr_ <= 0 || text.empty()) {
         return isEmpty_ ? "" : text;
     }
 
@@ -199,7 +215,7 @@ inline Chalk Chalk::strikethrough() const {
 }
 
 inline Chalk Chalk::visible() const {
-    return Chalk(styler_, level_, true);
+    return Chalk(styler_, level_ptr_, true);
 }
 
 // ─── Foreground Colors ────────────────────────────
@@ -353,29 +369,29 @@ inline Chalk Chalk::bgGrey() const {
 // ─── Advanced Color Methods ───────────────────────
 
 inline Chalk Chalk::rgb(int r, int g, int b) const {
-    return withStyle(ansi::makeColorCode(level_, r, g, b, false), ansi::FG_CLOSE);
+    return withStyle(ansi::makeColorCode(*level_ptr_, r, g, b, false), ansi::FG_CLOSE);
 }
 
 inline Chalk Chalk::hex(const std::string& color) const {
     auto [r, g, b] = ansi::hexToRgb(color);
-    return withStyle(ansi::makeColorCode(level_, r, g, b, false), ansi::FG_CLOSE);
+    return withStyle(ansi::makeColorCode(*level_ptr_, r, g, b, false), ansi::FG_CLOSE);
 }
 
 inline Chalk Chalk::ansi256(int index) const {
-    return withStyle(ansi::makeColorCode256(level_, index, false), ansi::FG_CLOSE);
+    return withStyle(ansi::makeColorCode256(*level_ptr_, index, false), ansi::FG_CLOSE);
 }
 
 inline Chalk Chalk::bgRgb(int r, int g, int b) const {
-    return withStyle(ansi::makeColorCode(level_, r, g, b, true), ansi::BG_CLOSE);
+    return withStyle(ansi::makeColorCode(*level_ptr_, r, g, b, true), ansi::BG_CLOSE);
 }
 
 inline Chalk Chalk::bgHex(const std::string& color) const {
     auto [r, g, b] = ansi::hexToRgb(color);
-    return withStyle(ansi::makeColorCode(level_, r, g, b, true), ansi::BG_CLOSE);
+    return withStyle(ansi::makeColorCode(*level_ptr_, r, g, b, true), ansi::BG_CLOSE);
 }
 
 inline Chalk Chalk::bgAnsi256(int index) const {
-    return withStyle(ansi::makeColorCode256(level_, index, true), ansi::BG_CLOSE);
+    return withStyle(ansi::makeColorCode256(*level_ptr_, index, true), ansi::BG_CLOSE);
 }
 
 } // namespace chalk

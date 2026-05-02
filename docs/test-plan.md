@@ -69,8 +69,37 @@
 
 Record exact commands run, service versions, and notable environment variables.
 
-- `cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug` (configure)
-- `cmake --build build -j$(nproc)` (compile)
-- `ctest --test-dir build --output-on-failure` (run GoogleTest suite)
-- `python3 docs/build.py` (build Doxygen+Sphinx documentation)
-- environment: GCC 13+/Clang 16+ with C++20; no service dependencies; tests do not require a TTY
+Last run: 2026-05-02 against polycpp checkout `/data/repo/polycpp-old`
+(HEAD `93a4f2f3`) using its `_deps` cache for asio/boringssl/brotli/
+fast_float/googletest/nghttp2/quickjs_engine/zlib/zstd. All 89 tests
+passed (81 pre-existing + 8 new regression tests added for AF-B / AF-C /
+AF-D in commit landing on master 2026-05-02).
+
+```bash
+DEPS=/data/repo/polycpp-old/build-clang14-gap-debug/_deps
+cmake -S /data/work/lib/chalk -B /data/work/lib/chalk/build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 \
+    -DCMAKE_C_COMPILER=/usr/bin/clang-14 \
+    -DFETCHCONTENT_SOURCE_DIR_POLYCPP=/data/repo/polycpp-old \
+    -DFETCHCONTENT_SOURCE_DIR_ASIO="$DEPS/asio-src" \
+    -DFETCHCONTENT_SOURCE_DIR_BORINGSSL="$DEPS/boringssl-src" \
+    -DFETCHCONTENT_SOURCE_DIR_BROTLI="$DEPS/brotli-src" \
+    -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST="$DEPS/googletest-src" \
+    -DFETCHCONTENT_SOURCE_DIR_ZLIB="$DEPS/zlib-src" \
+    -DFETCHCONTENT_SOURCE_DIR_ZSTD="$DEPS/zstd-src" \
+    -DPOLYCPP_IO=asio \
+    -DPOLYCPP_SSL_BACKEND=boringssl \
+    -DPOLYCPP_UNICODE=icu
+cmake --build /data/work/lib/chalk/build -j"$(nproc)" -t test_chalk
+( cd /data/work/lib/chalk/build && ctest --output-on-failure )
+python3 /data/work/lib/chalk/docs/build.py
+```
+
+The `_build_and_test.sh` helper at `/data/work/lib/_build_and_test.sh`
+encodes the same invocation but defaults to `/data/repo/polycpp` for the
+polycpp source path; pass `-DFETCHCONTENT_SOURCE_DIR_POLYCPP=...` if the
+default checkout is missing the `_deps` cache.
+
+Environment: clang++ 14 with C++20 standard; no service dependencies;
+tests do not require a TTY.

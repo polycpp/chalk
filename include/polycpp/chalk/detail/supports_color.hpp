@@ -3,19 +3,12 @@
 #include <polycpp/chalk/supports_color.hpp>
 
 #include <polycpp/core/number.hpp>
+#include <polycpp/platform/console.hpp>
 #include <polycpp/process.hpp>
 
 #include <cstdlib>
 #include <cstring>
 #include <string>
-
-#ifdef _WIN32
-#include <io.h>
-#define isatty_impl _isatty
-#else
-#include <unistd.h>
-#define isatty_impl isatty
-#endif
 
 namespace polycpp {
 namespace chalk {
@@ -120,7 +113,7 @@ inline ColorSupport detectColorSupport(int fd) {
     }
 
     // 3. Check if fd is a TTY (if not and no force -> 0)
-    bool isTTY = isatty_impl(fd) != 0;
+    bool isTTY = polycpp::platform::isTerminal(fd);
     if (!isTTY && forceColorLevel < 0) {
         return makeResult(0);
     }
@@ -254,5 +247,3 @@ inline const ColorSupport& supportsColorStderr() {
 
 } // namespace chalk
 } // namespace polycpp
-
-#undef isatty_impl

@@ -175,7 +175,11 @@ public:
 
 private:
     std::shared_ptr<const Styler> styler_;
-    int level_;
+    /// Shared with chain links so that mutating the parent's level
+    /// (via setLevel / level()) is observed lazily by every chain
+    /// link built from it. Matches upstream chalk's prototype-getter
+    /// semantics in `test/level.js`.
+    std::shared_ptr<int> level_ptr_;
     bool isEmpty_ = false;
 
     /// Create a new Chalk with an additional style layer.
@@ -184,8 +188,10 @@ private:
     /// Apply all accumulated styles to text.
     std::string applyStyle(const std::string& text) const;
 
-    /// Private constructor for chaining (all fields).
-    Chalk(std::shared_ptr<const Styler> styler, int level, bool isEmpty);
+    /// Private constructor for chaining (shares level_ptr with caller).
+    Chalk(std::shared_ptr<const Styler> styler,
+          std::shared_ptr<int> level_ptr,
+          bool isEmpty);
 };
 
 // ─── Global Instances ─────────────────────────────
