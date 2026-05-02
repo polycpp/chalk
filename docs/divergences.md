@@ -2,7 +2,6 @@
 
 ## Deferred Features
 
-- `os.release()`-based old Windows 10 truecolor detection. Modern Windows Terminals still set `WT_SESSION` and `COLORTERM=truecolor`, which the existing detection ladder honors, so the rare legacy path is left for a future revision.
 - A `createSupportsColor`/`detectColorSupport` overload that takes an explicit `sniffFlags`-style argument. The current C++ implementation reads `--color`/`--no-color` solely through the env-variable ladder; explicit CLI override is deferred until a real consumer needs it.
 
 ## Deliberate Behavior Changes

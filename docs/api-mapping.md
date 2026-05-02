@@ -35,7 +35,7 @@
 | `stringReplaceAll(string, search, replace)` | `polycpp::chalk::detail::replaceCloseWithReopen` | direct | Same semantics as upstream: keep `search`, append `replace` after every occurrence |
 | `stringEncaseCRLFWithFirstIndex(string, prefix, suffix, lfIndex)` | `polycpp::chalk::detail::encaseCRLF` | direct | Same semantics as upstream; closes before each `\n`, reopens after, keeps `\r` companion |
 | browser `supports-color` (`source/vendor/supports-color/browser.js`) | not provided | omitted | C++ has no browser target |
-| `os.release()` Windows 10 truecolor branch | not provided | deferred | Modern Windows Terminal still detects truecolor via `WT_SESSION` / `COLORTERM`; recorded in `docs/divergences.md` |
+| `os.release()` Windows 10 truecolor branch | `polycpp::os::release()` parsed and dispatched inside `detectColorSupport` (Windows-only `#ifdef _WIN32`) | direct | Mirrors upstream: build >= 10586 → 256-color; build >= 14931 → truecolor; otherwise level 1 |
 | upstream test-only TypeScript file `source/index.test-d.ts` | n/a | omitted | TypeScript-only assertions; C++ has its own GoogleTest suite |
 
 Status values:

@@ -64,6 +64,7 @@
 - `ansi256()` must always produce a 256-color sequence regardless of level.
 - Constructor must validate the `level` range and throw on misuse.
 - `supportsColor` must respect `FORCE_COLOR` and `NO_COLOR` precedence.
+- On Windows, `detectColorSupport` must read `polycpp::os::release()`, parse `<major>.<minor>.<build>`, and return level 3 when build >= 14931, level 2 when build >= 10586, otherwise level 1. The branch is `#ifdef _WIN32` and is exercised manually on Windows; Linux CI does not exercise it.
 
 ## Current validation
 

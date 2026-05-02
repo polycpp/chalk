@@ -6,6 +6,10 @@
 #include <polycpp/platform/console.hpp>
 #include <polycpp/process.hpp>
 
+#ifdef _WIN32
+#include <polycpp/os/os.hpp>
+#endif
+
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -125,6 +129,38 @@ inline ColorSupport detectColorSupport(int fd) {
     if (term == "dumb") {
         return makeResult(min);
     }
+
+#ifdef _WIN32
+    // Windows-platform branch (mirrors upstream supports-color):
+    //   Windows 10 build 10586 is the first Windows release that supports 256 colors.
+    //   Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+    // polycpp::os::release() returns the kernel version as
+    // "<major>.<minor>.<build>" via RtlGetVersion (e.g. "10.0.19045"),
+    // matching Node's os.release() shape on Windows. Upstream JS reads
+    // parts[0] and parts[2]; we do the same.
+    {
+        std::string osRelease = polycpp::os::release();
+        auto firstDot = osRelease.find('.');
+        std::string majorStr;
+        std::string buildStr;
+        if (firstDot != std::string::npos) {
+            majorStr = osRelease.substr(0, firstDot);
+            auto secondDot = osRelease.find('.', firstDot + 1);
+            if (secondDot != std::string::npos) {
+                buildStr = osRelease.substr(secondDot + 1);
+            }
+        }
+        if (!majorStr.empty() && !buildStr.empty()) {
+            double major = polycpp::Number::parseInt(majorStr, 10);
+            double build = polycpp::Number::parseInt(buildStr, 10);
+            if (!polycpp::Number::isNaN(major) && !polycpp::Number::isNaN(build)
+                    && major >= 10 && build >= 10586) {
+                return makeResult(build >= 14931 ? 3 : 2);
+            }
+        }
+        return makeResult(1);
+    }
+#endif
 
     // 4. Check CI environment
     if (detail::hasEnv("CI")) {

@@ -139,7 +139,7 @@ Tests, fixtures, examples, and docs directories:
 - polycpp core paths inspected: `include/polycpp/core/error.hpp`, `include/polycpp/core/math.hpp`, `include/polycpp/core/number.hpp`, `include/polycpp/process.hpp`, `include/polycpp/platform/console.hpp`, `include/polycpp/platform/detail/posix/console_traits.hpp`, `include/polycpp/platform/detail/win32/console_traits.hpp`, `include/polycpp/util/util.hpp` (the existing `polycpp::util::format` color-aware helpers).
 - polycpp capability snapshot: base polycpp checkout at `/data/work/gitlab-workspace/polycpp` HEAD `7a8df099e2564ff55729a1d2121feb9a88501119` from `git -C /data/work/gitlab-workspace/polycpp rev-parse HEAD` on 2026-05-01. `polycpp::process::getenv`, `polycpp::Math::round/floor/max`, `polycpp::Number::parseInt`/`Number::isNaN`, `polycpp::Error`, and `polycpp::platform::{isTerminal,getTermType,supportsColor}` are all available in that snapshot.
 - transport/listener capability review: not applicable. chalk has no socket, listener, TLS, or stream transport surface; the C++ port consumes a raw POSIX/Windows file descriptor only for `isatty`. The current snapshot exposes `polycpp::io::TcpAcceptor`, `polycpp::io::PipeAcceptor`, `polycpp::io::StreamAcceptor`, and `polycpp::tls::*` — none of which are used here. No deferred socket or TLS work exists.
-- polycpp core types/functions selected: `polycpp::process::getenv` (env access), `polycpp::Number::parseInt`/`Number::isNaN` (FORCE_COLOR / TERM_PROGRAM_VERSION parsing), `polycpp::Math::round`/`Math::floor`/`Math::max` (color downsampling), `polycpp::Error` (level validation throw), `polycpp::platform::isTerminal` (cross-platform `isatty` wrapper used by `detectColorSupport`).
+- polycpp core types/functions selected: `polycpp::process::getenv` (env access), `polycpp::Number::parseInt`/`Number::isNaN` (FORCE_COLOR / TERM_PROGRAM_VERSION / Windows release parsing), `polycpp::Math::round`/`Math::floor`/`Math::max` (color downsampling), `polycpp::Error` (level validation throw), `polycpp::platform::isTerminal` (cross-platform `isatty` wrapper), `polycpp::os::release` (Windows-only build-number detection used by `detectColorSupport`).
 - polycpp core types/functions rejected: `polycpp::platform::supportsColor(fd)` returns only a boolean and would throw away the 0/1/2/3 level; chalk requires the level so it owns its own env-variable ladder. `polycpp::Buffer`, `polycpp::Stream`, `polycpp::http::Headers`, `polycpp::URL`, `polycpp::JSON`, and `polycpp::events` are not needed because chalk has no buffer/stream/HTTP/URL/JSON/event surface.
 - public polycpp interop review: ANSI string output is byte-oriented `std::string`; no JSON or Date interop applies; `Options` is a one-field struct so no `toJSON`/`toObject` adapter is justified.
 - string policy: use `std::string` (UTF-8). The ANSI escape pipeline is byte-oriented and chalk does not depend on JavaScript UTF-16 code-unit semantics, so `polycpp::String` is intentionally not used.
@@ -161,7 +161,7 @@ Tests, fixtures, examples, and docs directories:
 - server/listener APIs: not applicable; chalk has no listen modes, no TCP/Unix path/TLS sockets, and no adopted-handle path. No transport or listener primitives to wire up.
 - stream APIs: not applicable; chalk operates on whole strings. No object-mode chunking, no NDJSON adapter, no transform stream needed.
 - Buffer and binary APIs: not applicable; output is `std::string`
-- URL, timer, process, and filesystem APIs: only `process.env` and `tty.isatty(fd)` are used. `process.env` maps to `polycpp::process::getenv`. `tty.isatty` maps to the platform `isatty` call (POSIX `unistd.h`, Windows `_isatty`). `os.release()` (used upstream for old Windows 10 truecolor detection) is intentionally omitted from v0; recorded in divergences. There are no connect, per-command, pool, or idle deadlines.
+- URL, timer, process, and filesystem APIs: `process.env` maps to `polycpp::process::getenv`; `tty.isatty(fd)` maps to `polycpp::platform::isTerminal(fd)`; `os.release()` (used by upstream for the Windows 10 build 10586/14931 truecolor branch) maps to `polycpp::os::release()` and the same parsing logic. There are no connect, per-command, pool, or idle deadlines.
 - crypto, compression, TLS, network, and HTTP APIs: not applicable. No client transport, no server/listener lifecycle, no Unix/IPC path support, and no TLS client/server modes — chalk does not touch any of these surfaces.
 - unsupported Node-specific APIs and audit reason: the JavaScript Symbol-based proxy chain (`Symbol('GENERATOR')`, `Symbol('STYLER')`, `Symbol('IS_EMPTY')`) and the `Object.setPrototypeOf` trick that makes a Chalk instance both callable and a function are not meaningful in C++; we model them as `Chalk::operator()` plus a private `Styler` linked list
 
@@ -217,7 +217,6 @@ Tests, fixtures, examples, and docs directories:
 
 ## Features to defer
 
-- `os.release()`-based old Windows 10 truecolor detection (rare path; current detection still works for modern Windows Terminal via `WT_SESSION` / `COLORTERM` paths)
 - Browser-environment supports-color stub (`source/vendor/supports-color/browser.js`); not applicable in C++
 
 ## v0 scope
