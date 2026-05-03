@@ -626,6 +626,26 @@ TEST(SupportsColorTest, StderrReturnsValidLevel) {
     EXPECT_EQ(cs.has16m, cs.level >= 3);
 }
 
+TEST(SupportsColorTest, WindowsReleaseBuildBeforeThresholdIsBasic) {
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0.10240"), 1);
+    EXPECT_EQ(detail::windowsReleaseColorLevel("6.3.9600"), 1);
+}
+
+TEST(SupportsColorTest, WindowsReleaseBuild10586IsAnsi256) {
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0.10586"), 2);
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0.14930"), 2);
+}
+
+TEST(SupportsColorTest, WindowsReleaseBuild14931IsTruecolor) {
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0.14931"), 3);
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0.19045"), 3);
+}
+
+TEST(SupportsColorTest, WindowsReleaseMalformedFallsBackToBasic) {
+    EXPECT_EQ(detail::windowsReleaseColorLevel("10.0"), 1);
+    EXPECT_EQ(detail::windowsReleaseColorLevel("not-a-release"), 1);
+}
+
 // ═══ Name Array Tests ═══════════════════════════════
 
 TEST(NameArraysTest, ModifierNames) {

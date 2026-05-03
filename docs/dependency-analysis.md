@@ -80,7 +80,7 @@ For every dependency, also choose a license strategy.
 
 - `process.env` (read in `source/vendor/supports-color/index.js` for FORCE_COLOR, NO_COLOR, TERM, COLORTERM, CI markers, TERM_PROGRAM, TERM_PROGRAM_VERSION, TEAMCITY_VERSION, etc.)
 - `tty.hasColors`-style detection through `tty.isatty(fd)` (read in `source/vendor/supports-color/index.js`)
-- `os.release()` (read in `source/vendor/supports-color/index.js` for old Windows 10 truecolor detection only — intentionally omitted from v0; recorded in `docs/divergences.md`)
+- `os.release()` (read in `source/vendor/supports-color/index.js` for old Windows 10 truecolor detection; mapped to `polycpp::os::release()` in the Windows-only branch and covered by threshold tests)
 
 The analyzer's `nodeApis` was empty for the chalk package because the upstream `index.js` does not directly import Node modules — they are imported only inside the vendored `supports-color`. The analyzer treats vendored files as part of the package, which is why the per-target counts read `0` Node API calls; manual inspection of the vendored file confirms `process.env`, `tty.isatty`, and `os.release` usage above.
 

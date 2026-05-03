@@ -5,7 +5,7 @@
 - ANSI escape generation: `wrapAnsi16`, `wrapAnsi256` (foreground and background), `wrapAnsi16m` (foreground and background) emit the expected escape strings.
 - RGB/256/hex math: `rgbToAnsi256` for both grayscale and color regions; `ansi256ToAnsi` for `0..7`, `8..15`, `16..231`, `232..255`; `hexToRgb` for 6-char, 3-char, lowercase, and invalid input; `rgbToAnsi` end-to-end.
 - `makeColorCode` truecolor (level 3), 256 (level 2), 16 (level 1) for both foreground and background; `makeColorCode(level, hex)` overload; `makeColorCode256` always emits a 256-color sequence regardless of level.
-- `Chalk` construction defaults to level 0; `Options{level=N}` sets level N; out-of-range levels throw `polycpp::Error`; `setLevel` updates the level on an existing instance.
+- `Chalk` default construction and `Options{}` fall back to the auto-detected stdout level; `Options{level=N}` sets level N; out-of-range levels throw `polycpp::Error`; `setLevel` updates the level on an existing instance.
 - Empty input string returns empty; level 0 returns plain text; no chain returns plain text.
 - Modifier methods (reset/bold/dim/italic/underline/overline/inverse/hidden/strikethrough) emit the correct open/close codes.
 - Foreground/background standard 16 + bright 16 + `gray`/`grey` aliases emit correct codes.
@@ -59,43 +59,27 @@
 - `ansi256()` must always produce a 256-color sequence regardless of level.
 - Constructor must validate the `level` range and throw on misuse.
 - `supportsColor` must respect `FORCE_COLOR` and `NO_COLOR` precedence.
-- On Windows, `detectColorSupport` must read `polycpp::os::release()`, parse `<major>.<minor>.<build>`, and return level 3 when build >= 14931, level 2 when build >= 10586, otherwise level 1. The branch is `#ifdef _WIN32` and is exercised manually on Windows; Linux CI does not exercise it.
+- On Windows, `detectColorSupport` must read `polycpp::os::release()`, parse `<major>.<minor>.<build>`, and return level 3 when build >= 14931, level 2 when build >= 10586, otherwise level 1. The release-string threshold parser is covered by `SupportsColorTest.WindowsRelease*`; the actual `polycpp::os::release()` call remains behind `#ifdef _WIN32`.
 
 ## Current validation
 
 Record exact commands run, service versions, and notable environment variables.
 
-Last run: 2026-05-02 against polycpp checkout `/data/repo/polycpp-old`
-(HEAD `93a4f2f3`) using its `_deps` cache for asio/boringssl/brotli/
-fast_float/googletest/nghttp2/quickjs_engine/zlib/zstd. All 89 tests
-passed (81 pre-existing + 8 new regression tests added for AF-B / AF-C /
-AF-D in commit landing on master 2026-05-02).
+Last run: 2026-05-03 on Windows against polycpp checkout
+`E:\dev\lib\polycpp` using CMake 3.31.11, Visual Studio 17 2022, and
+MSVC 19.44.35211. All 93 tests passed.
 
-```bash
-DEPS=/data/repo/polycpp-old/build-clang14-gap-debug/_deps
-cmake -S /data/work/lib/chalk -B /data/work/lib/chalk/build -G Ninja \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_CXX_COMPILER=/usr/bin/clang++-14 \
-    -DCMAKE_C_COMPILER=/usr/bin/clang-14 \
-    -DFETCHCONTENT_SOURCE_DIR_POLYCPP=/data/repo/polycpp-old \
-    -DFETCHCONTENT_SOURCE_DIR_ASIO="$DEPS/asio-src" \
-    -DFETCHCONTENT_SOURCE_DIR_BORINGSSL="$DEPS/boringssl-src" \
-    -DFETCHCONTENT_SOURCE_DIR_BROTLI="$DEPS/brotli-src" \
-    -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST="$DEPS/googletest-src" \
-    -DFETCHCONTENT_SOURCE_DIR_ZLIB="$DEPS/zlib-src" \
-    -DFETCHCONTENT_SOURCE_DIR_ZSTD="$DEPS/zstd-src" \
-    -DPOLYCPP_IO=asio \
-    -DPOLYCPP_SSL_BACKEND=boringssl \
-    -DPOLYCPP_UNICODE=icu
-cmake --build /data/work/lib/chalk/build -j"$(nproc)" -t test_chalk
-( cd /data/work/lib/chalk/build && ctest --output-on-failure )
-python3 /data/work/lib/chalk/docs/build.py
+```powershell
+cmake -S . -B build-msvc `
+    -DFETCHCONTENT_SOURCE_DIR_POLYCPP=E:\dev\lib\polycpp `
+    -DPOLYCPP_SSL_BACKEND=boringssl `
+    -DPOLYCPP_UNICODE=builtin `
+    -DOPENSSL_NO_ASM=1
+cmake --build build-msvc --config Debug --target test_chalk --parallel
+ctest --test-dir build-msvc -C Debug --output-on-failure
+cmake --build build-msvc --config Debug --parallel
 ```
 
-The `_build_and_test.sh` helper at `/data/work/lib/_build_and_test.sh`
-encodes the same invocation but defaults to `/data/repo/polycpp` for the
-polycpp source path; pass `-DFETCHCONTENT_SOURCE_DIR_POLYCPP=...` if the
-default checkout is missing the `_deps` cache.
-
-Environment: clang++ 14 with C++20 standard; no service dependencies;
-tests do not require a TTY.
+`OPENSSL_NO_ASM=1` is required for the Visual Studio generator when using
+BoringSSL on this machine; without it, BoringSSL's generated project references
+NASM objects that the generator does not assemble. Tests do not require a TTY.

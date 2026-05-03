@@ -7,9 +7,15 @@
 #include <polycpp/process.hpp>
 
 #ifdef _WIN32
+#ifdef POLYCPP_HEADER_ONLY
+#include <polycpp/os.hpp>
+#else
 #include <polycpp/os/os.hpp>
 #endif
+#endif
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -66,6 +72,31 @@ inline bool containsCI(const std::string& str, const std::string& needle) {
 /// @brief Check if environment variable is set (exists).
 inline bool hasEnv(const char* name) {
     return std::getenv(name) != nullptr;
+}
+
+/// @brief Map a Windows kernel release string to the upstream color level.
+inline int windowsReleaseColorLevel(const std::string& osRelease) {
+    auto firstDot = osRelease.find('.');
+    std::string majorStr;
+    std::string buildStr;
+    if (firstDot != std::string::npos) {
+        majorStr = osRelease.substr(0, firstDot);
+        auto secondDot = osRelease.find('.', firstDot + 1);
+        if (secondDot != std::string::npos) {
+            buildStr = osRelease.substr(secondDot + 1);
+        }
+    }
+
+    if (!majorStr.empty() && !buildStr.empty()) {
+        double major = polycpp::Number::parseInt(majorStr, 10);
+        double build = polycpp::Number::parseInt(buildStr, 10);
+        if (!polycpp::Number::isNaN(major) && !polycpp::Number::isNaN(build)
+                && major >= 10 && build >= 10586) {
+            return build >= 14931 ? 3 : 2;
+        }
+    }
+
+    return 1;
 }
 
 } // namespace detail
@@ -138,28 +169,7 @@ inline ColorSupport detectColorSupport(int fd) {
     // "<major>.<minor>.<build>" via RtlGetVersion (e.g. "10.0.19045"),
     // matching Node's os.release() shape on Windows. Upstream JS reads
     // parts[0] and parts[2]; we do the same.
-    {
-        std::string osRelease = polycpp::os::release();
-        auto firstDot = osRelease.find('.');
-        std::string majorStr;
-        std::string buildStr;
-        if (firstDot != std::string::npos) {
-            majorStr = osRelease.substr(0, firstDot);
-            auto secondDot = osRelease.find('.', firstDot + 1);
-            if (secondDot != std::string::npos) {
-                buildStr = osRelease.substr(secondDot + 1);
-            }
-        }
-        if (!majorStr.empty() && !buildStr.empty()) {
-            double major = polycpp::Number::parseInt(majorStr, 10);
-            double build = polycpp::Number::parseInt(buildStr, 10);
-            if (!polycpp::Number::isNaN(major) && !polycpp::Number::isNaN(build)
-                    && major >= 10 && build >= 10586) {
-                return makeResult(build >= 14931 ? 3 : 2);
-            }
-        }
-        return makeResult(1);
-    }
+    return makeResult(detail::windowsReleaseColorLevel(polycpp::os::release()));
 #endif
 
     // 4. Check CI environment

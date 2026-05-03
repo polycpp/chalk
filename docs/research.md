@@ -224,7 +224,7 @@ Tests, fixtures, examples, and docs directories:
 - port version: 1.0.0
 - versioning note: port version is independent from upstream versioning
 - supported APIs: `Chalk`, `Options`, `chalk()`, `chalkStderr()`, all modifier and color chain methods, `rgb`/`hex`/`ansi256`/`bgRgb`/`bgHex`/`bgAnsi256`, `visible`, `level()`/`setLevel()`, multi-arg `operator()`, `ColorSupport`, `detectColorSupport`, `supportsColor`, `supportsColorStderr`, `modifierNames`, `foregroundColorNames`, `backgroundColorNames`, `colorNames`, `ansi::*` low-level helpers
-- unsupported APIs: JavaScript-specific Symbol-based chain extension, `Object.defineProperty` proxy memoization, browser entry for supports-color, old Windows 10 release detection
+- unsupported APIs: JavaScript-specific Symbol-based chain extension, `Object.defineProperty` proxy memoization, browser entry for supports-color
 - dependency plan: no new companion libraries are required; the port depends only on base `polycpp` (`process`, `core/error`, `core/math`, `core/number`)
 - polycpp modules to use: `polycpp::process`, `polycpp::Math`, `polycpp::Number`, `polycpp::Error`
 - missing polycpp primitives: none. `polycpp::platform::isTerminal(fd)` covers the cross-platform `isatty` need.
